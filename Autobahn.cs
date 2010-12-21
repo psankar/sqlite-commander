@@ -1,19 +1,73 @@
 using System;
+using System.Collections.Generic;
 using System.Data;
 using Mono.Terminal;
 using Mono.Data.SqliteClient;
 
-namespace Autobahn {
+namespace Autobahn 
+{
+	public class TablesList : IListProvider 
+	{
+		public List<string> items = new List<string> ();
+		public ListView view;
 
-	public class Shell : Container {
-
-		public Shell () : base (0, 0, Application.Cols, Application.Lines)
+		public void Render (int line, int col, int width, int item)
 		{
-			Add (new Label (0, 0, "Hello World"));
+			Curses.addstr (items[item]);
 		}
 
-		static void Main (String [] args) {
+		public bool AllowMark 	{
+			get {
+				return false;
+			}
+		}
 
+		public int Items {
+			get {
+				return items.Count;
+			}
+		}
+
+		public bool IsMarked (int item)
+		{
+			return false;
+		}
+
+		public bool ProcessKey (int ch)
+		{
+			return false;
+		}
+
+		public void SelectedChanged ()
+		{
+			return;
+		}
+
+		public void SetListView (ListView target)
+		{
+			view = target;	
+		}
+
+		public void Add (string s)
+		{
+			items.Add (s);
+		}
+
+	}
+
+
+	public class Shell : Container 
+	{
+		public Shell (TablesList tables) : base (0, 0, Application.Cols, Application.Lines)
+		{
+			Add (new Label (45, 0, "Autobahn - The SQLite Browser"));
+
+			ListView tables_view = new ListView (0, 1, 5, tables.Items, tables);
+			Add (tables_view);
+		}
+
+		static void Main (String [] args) 
+		{
 			if (args.Length != 1)
 				Console.WriteLine ("Insufficient number of parameters");
 			else {
@@ -23,6 +77,8 @@ namespace Autobahn {
 				IDbConnection db_connection;
 				IDataReader reader;
 
+				TablesList tables = new TablesList ();
+
 				connectionString = "URI=file:" + args[0];
 				db_connection = (IDbConnection) new SqliteConnection(connectionString);
 				db_connection.Open ();
@@ -31,8 +87,7 @@ namespace Autobahn {
 				command.CommandText = sql;
 				reader = command.ExecuteReader ();
 				while (reader.Read ()) {
-					string TableName = reader.GetString (0);
-					Console.WriteLine("Name: " + TableName);
+					tables.Add (reader.GetString (0));
 				}
 
 				// clean up
@@ -41,8 +96,7 @@ namespace Autobahn {
 				db_connection.Close (); db_connection = null;
 
 				Application.Init (false);
-
-				Shell s = new Shell ();
+				Shell s = new Shell (tables);
 				Application.Run (s);
 			}
 		}
