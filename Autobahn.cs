@@ -80,15 +80,15 @@ namespace Autobahn
 				string connectionString;
 				string sql;
 				IDbCommand command;
-				IDbConnection db_connection;
+				IDbConnection dbConnection;
 				IDataReader reader;
 
 				TablesList tables = new TablesList ();
 
 				connectionString = "URI=file:" + args[0];
-				db_connection = (IDbConnection) new SqliteConnection(connectionString);
-				db_connection.Open ();
-				command = db_connection.CreateCommand ();
+				dbConnection = (IDbConnection) new SqliteConnection(connectionString);
+				dbConnection.Open ();
+				command = dbConnection.CreateCommand ();
 				sql = "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name";
 				command.CommandText = sql;
 				reader = command.ExecuteReader ();
@@ -99,7 +99,7 @@ namespace Autobahn
 				// clean up
 				reader.Close (); reader = null;
 				command.Dispose (); command = null;
-				db_connection.Close (); db_connection = null;
+				dbConnection.Close (); dbConnection = null;
 
 				Application.Init (false);
 				Shell s = new Shell (tables);
