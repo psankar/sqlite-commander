@@ -60,10 +60,16 @@ namespace Autobahn
 	{
 		public Shell (TablesList tables) : base (0, 0, Application.Cols, Application.Lines)
 		{
-			Add (new Label (45, 0, "Autobahn - The SQLite Browser"));
+			Frame masterFrame = new Frame ("Autobahn - The SQLite Browser");
+			Add (masterFrame);
+			
+			masterFrame.x = 0;
+			masterFrame.y = 0;
+			masterFrame.w = Application.Cols;
+			masterFrame.h = Application.Lines;
 
-			ListView tables_view = new ListView (0, 1, 5, tables.Items, tables);
-			Add (tables_view);
+			ListView tables_view = new ListView (1, 1, 1, tables.Items, tables);
+			masterFrame.Add (tables_view);
 		}
 
 		static void Main (String [] args) 
