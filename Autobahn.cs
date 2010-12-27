@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections;
 using System.Data;
 using Mono.Terminal;
 using Mono.Data.SqliteClient;
@@ -57,12 +58,18 @@ namespace Autobahn
 
 	public class RecordsList : IListProvider
 	{
-		public List<string> items = new List<string> ();
+		public List<IEnumerable	> items = new List<IEnumerable> ();
 		public ListView view;
 
 		public void Render (int line, int col, int width, int item)
 		{
-			Curses.addstr (items[item]);
+			string record = "";
+			List<string> l = (List<string>) items[item];
+			
+			foreach (string column in l) {
+				record = record + column + " ";
+			}
+			Curses.addstr (record);
 		}
 
 		public bool AllowMark 	{
@@ -97,7 +104,7 @@ namespace Autobahn
 			view = target;
 		}
 
-		public void Add (string s)
+		public void Add (IEnumerable s)
 		{
 			items.Add (s);
 		}
@@ -108,19 +115,30 @@ namespace Autobahn
 	{
 		public Shell (TablesList tables, RecordsList records) : base (0, 0, Application.Cols, Application.Lines)
 		{
-			Frame masterFrame = new Frame ("Autobahn - The SQLite Browser");
-			Add (masterFrame);
+			Frame tablesFrame = new Frame ("Tables");
+			Add (tablesFrame);
 			
-			masterFrame.x = 0;
-			masterFrame.y = 0;
-			masterFrame.w = Application.Cols;
-			masterFrame.h = Application.Lines;
+			tablesFrame.x = 0;
+			tablesFrame.y = 0;
+
+			int TABLES_WIDTH = 20;
+
+			tablesFrame.w = TABLES_WIDTH;
+			tablesFrame.h = Application.Lines;
 
 			ListView tables_view = new ListView (1, 1, 1, tables.Items, tables);
-			masterFrame.Add (tables_view);
+			tablesFrame.Add (tables_view);
+
+			Frame recordsFrame = new Frame ("Records");
+			recordsFrame.x = TABLES_WIDTH;
+			recordsFrame.y = 0;
+		    recordsFrame.w = Application.Cols - TABLES_WIDTH - 1;
+			recordsFrame.h = Application.Lines;
+
+			Add (recordsFrame);
 
 			ListView records_view = new ListView (20, 1, 1, records.Items, records);
-			masterFrame.Add (records_view);
+			recordsFrame.Add (records_view);
 
 		}
 
@@ -152,9 +170,21 @@ namespace Autobahn
 				sql = "SELECT * FROM " + tables.items [0];
 				command.CommandText = sql;
 				reader = command.ExecuteReader ();
-				int n = 0;
+				int n = 0, col_count;
 				while (reader.Read () && n++ < 30) {
-					records.Add (reader.GetString (0));
+					List <string> record;
+					record = new List<string> ();
+
+					Console.WriteLine ("Number of the columns in the records " + reader.FieldCount);
+					for (col_count = 0; col_count < reader.FieldCount; ++col_count) {
+						try {
+							Console.WriteLine (col_count + "Adding column " + reader.GetString (col_count));
+							record.Add (reader.GetString (col_count));
+						} catch (System.NullReferenceException ex){
+							record.Add ("???");
+						}
+					}
+					records.Add (record);
 				}
 
 				// clean up
