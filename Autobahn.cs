@@ -118,11 +118,58 @@ namespace Autobahn
 
 	public class Shell : Container 
 	{
-		public Shell (TablesList tables, RecordsList records) : base (0, 0, Application.Cols, Application.Lines)
+		public Shell (string filename) : base (0, 0, Application.Cols, Application.Lines)
 		{
+			string connectionString;
+			string sql;
+			IDbCommand command;
+			IDbConnection dbConnection;
+			IDataReader reader;
+
+			TablesList tables = new TablesList ();
+
+			connectionString = "URI=file:" + filename;
+			dbConnection = (IDbConnection) new SqliteConnection(connectionString);
+			dbConnection.Open ();
+			command = dbConnection.CreateCommand ();
+			sql = "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name";
+			command.CommandText = sql;
+			reader = command.ExecuteReader ();
+			while (reader.Read ()) {
+				tables.Add (reader.GetString (0));
+			}
+
+			RecordsList records = new RecordsList ();
+			sql = "SELECT * FROM " + tables.items [0];
+			command.CommandText = sql;
+			reader = command.ExecuteReader ();
+			int n = 0, col_count;
+			while (reader.Read () && n++ < 30) {
+				List <string> record;
+				record = new List<string> ();
+
+				Console.WriteLine ("Number of the columns in the records " + reader.FieldCount);
+				for (col_count = 0; col_count < reader.FieldCount; ++col_count) {
+					try {
+						Console.WriteLine (col_count + "Adding column " + reader.GetString (col_count));
+						record.Add (reader.GetString (col_count));
+					} catch (System.NullReferenceException ex){
+						record.Add ("???");
+					}
+				}
+				records.Add (record);
+			}
+
+			// clean up
+			reader.Close (); reader = null;
+			command.Dispose (); command = null;
+			dbConnection.Close (); dbConnection = null;
+
+
+			/* =========================================== */
 			Frame tablesFrame = new Frame ("Tables");
 			Add (tablesFrame);
-			
+
 			tablesFrame.x = 0;
 			tablesFrame.y = 0;
 
@@ -137,7 +184,7 @@ namespace Autobahn
 			Frame recordsFrame = new Frame ("Records");
 			recordsFrame.x = TABLES_WIDTH;
 			recordsFrame.y = 0;
-		    recordsFrame.w = Application.Cols - TABLES_WIDTH - 1;
+			recordsFrame.w = Application.Cols - TABLES_WIDTH - 1;
 			recordsFrame.h = Application.Lines;
 
 			Add (recordsFrame);
@@ -152,53 +199,8 @@ namespace Autobahn
 			if (args.Length != 1)
 				Console.WriteLine ("Insufficient number of parameters");
 			else {
-				string connectionString;
-				string sql;
-				IDbCommand command;
-				IDbConnection dbConnection;
-				IDataReader reader;
-
-				TablesList tables = new TablesList ();
-
-				connectionString = "URI=file:" + args[0];
-				dbConnection = (IDbConnection) new SqliteConnection(connectionString);
-				dbConnection.Open ();
-				command = dbConnection.CreateCommand ();
-				sql = "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name";
-				command.CommandText = sql;
-				reader = command.ExecuteReader ();
-				while (reader.Read ()) {
-					tables.Add (reader.GetString (0));
-				}
-
-				RecordsList records = new RecordsList ();
-				sql = "SELECT * FROM " + tables.items [0];
-				command.CommandText = sql;
-				reader = command.ExecuteReader ();
-				int n = 0, col_count;
-				while (reader.Read () && n++ < 30) {
-					List <string> record;
-					record = new List<string> ();
-
-					Console.WriteLine ("Number of the columns in the records " + reader.FieldCount);
-					for (col_count = 0; col_count < reader.FieldCount; ++col_count) {
-						try {
-							Console.WriteLine (col_count + "Adding column " + reader.GetString (col_count));
-							record.Add (reader.GetString (col_count));
-						} catch (System.NullReferenceException ex){
-							record.Add ("???");
-						}
-					}
-					records.Add (record);
-				}
-
-				// clean up
-				reader.Close (); reader = null;
-				command.Dispose (); command = null;
-				dbConnection.Close (); dbConnection = null;
-
 				Application.Init (false);
-				Shell s = new Shell (tables, records);
+				Shell s = new Shell (args [0]);
 				Application.Run (s);
 			}
 		}
