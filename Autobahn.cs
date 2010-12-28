@@ -118,14 +118,14 @@ namespace Autobahn
 
 	public class Shell : Container 
 	{
+		IDbCommand command;
+		IDbConnection dbConnection;
+		IDataReader reader;
+
 		public Shell (string filename) : base (0, 0, Application.Cols, Application.Lines)
 		{
 			string connectionString;
 			string sql;
-			IDbCommand command;
-			IDbConnection dbConnection;
-			IDataReader reader;
-
 			TablesList tables = new TablesList ();
 
 			connectionString = "URI=file:" + filename;
@@ -160,12 +160,6 @@ namespace Autobahn
 				records.Add (record);
 			}
 
-			// clean up
-			reader.Close (); reader = null;
-			command.Dispose (); command = null;
-			dbConnection.Close (); dbConnection = null;
-
-
 			/* =========================================== */
 			Frame tablesFrame = new Frame ("Tables");
 			Add (tablesFrame);
@@ -191,7 +185,14 @@ namespace Autobahn
 
 			ListView records_view = new ListView (1, 1, 1, records.Items, records);
 			recordsFrame.Add (records_view);
+		}
 
+		~Shell ()
+		{
+			// clean up
+			reader.Close (); reader = null;
+			command.Dispose (); command = null;
+			dbConnection.Close (); dbConnection = null;
 		}
 
 		static void Main (String [] args) 
