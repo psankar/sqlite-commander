@@ -60,6 +60,8 @@ namespace Autobahn
 	{
 		public List<IEnumerable	> items = new List<IEnumerable> ();
 		public ListView view;
+		
+		static int MAX_CHARS_PER_COLUMN = 30;
 
 		public void Render (int line, int col, int width, int item)
 		{
@@ -67,7 +69,10 @@ namespace Autobahn
 			List<string> l = (List<string>) items[item];
 			
 			foreach (string column in l) {
-				record = record + column + " ";
+				if (column.Length > MAX_CHARS_PER_COLUMN)
+					record = record + column.Substring (0, MAX_CHARS_PER_COLUMN) + "... ";
+				else
+					record = record + column + " ";
 			}
 			Curses.addstr (record);
 		}
@@ -121,7 +126,7 @@ namespace Autobahn
 			tablesFrame.x = 0;
 			tablesFrame.y = 0;
 
-			int TABLES_WIDTH = 20;
+			int TABLES_WIDTH = 25;
 
 			tablesFrame.w = TABLES_WIDTH;
 			tablesFrame.h = Application.Lines;
@@ -137,7 +142,7 @@ namespace Autobahn
 
 			Add (recordsFrame);
 
-			ListView records_view = new ListView (20, 1, 1, records.Items, records);
+			ListView records_view = new ListView (1, 1, 1, records.Items, records);
 			recordsFrame.Add (records_view);
 
 		}
