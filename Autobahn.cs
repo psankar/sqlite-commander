@@ -121,6 +121,11 @@ namespace Autobahn
 		IDbCommand command;
 		IDbConnection dbConnection;
 		IDataReader reader;
+		
+		static int TABLES_WIDTH = 25;
+		static int MAX_NUMBER_OF_RECORDS = 30;
+		
+		string currentTable;
 
 		public Shell (string filename) : base (0, 0, Application.Cols, Application.Lines)
 		{
@@ -138,17 +143,17 @@ namespace Autobahn
 			while (reader.Read ()) {
 				tables.Add (reader.GetString (0));
 			}
+			currentTable = tables.items [0];
 
 			RecordsList records = new RecordsList ();
-			sql = "SELECT * FROM " + tables.items [0];
+			sql = "SELECT * FROM " + currentTable;
 			command.CommandText = sql;
 			reader = command.ExecuteReader ();
 			int n = 0, col_count;
-			while (reader.Read () && n++ < 30) {
+			while (reader.Read () && n++ < MAX_NUMBER_OF_RECORDS) {
 				List <string> record;
 				record = new List<string> ();
 
-				Console.WriteLine ("Number of the columns in the records " + reader.FieldCount);
 				for (col_count = 0; col_count < reader.FieldCount; ++col_count) {
 					try {
 						Console.WriteLine (col_count + "Adding column " + reader.GetString (col_count));
@@ -166,8 +171,6 @@ namespace Autobahn
 
 			tablesFrame.x = 0;
 			tablesFrame.y = 0;
-
-			int TABLES_WIDTH = 25;
 
 			tablesFrame.w = TABLES_WIDTH;
 			tablesFrame.h = Application.Lines;
