@@ -12,6 +12,11 @@ namespace Autobahn
 		public List<string> items = new List<string> ();
 		public ListView view;
 
+		public event TableSelectionChanged newSel;
+		public EventArgs e = null;
+
+		public delegate void TableSelectionChanged(TablesList t, EventArgs e);
+
 		public void Render (int line, int col, int width, int item)
 		{
 			Curses.addstr (items[item]);
@@ -41,6 +46,7 @@ namespace Autobahn
 
 		public void SelectedChanged ()
 		{
+			newSel (this, e);
 			return;
 		}
 
@@ -53,21 +59,20 @@ namespace Autobahn
 		{
 			items.Add (s);
 		}
-
 	}
 
 	public class RecordsList : IListProvider
 	{
-		public List<IEnumerable	> items = new List<IEnumerable> ();
+		public List<IEnumerable> items = new List<IEnumerable> ();
 		public ListView view;
-		
+
 		static int MAX_CHARS_PER_COLUMN = 30;
 
 		public void Render (int line, int col, int width, int item)
 		{
 			string record = "";
 			List<string> l = (List<string>) items[item];
-			
+
 			foreach (string column in l) {
 				if (column.Length > MAX_CHARS_PER_COLUMN)
 					record = record + column.Substring (0, MAX_CHARS_PER_COLUMN) + "... ";
@@ -115,23 +120,65 @@ namespace Autobahn
 		}
 	}
 
-
 	public class Shell : Container 
 	{
 		IDbCommand command;
 		IDbConnection dbConnection;
 		IDataReader reader;
-		
+
+		TablesList tables;
+		RecordsList records;
+		ListView tables_view;
+		ListView records_view;
+
+		Frame recordsFrame;
+
 		static int TABLES_WIDTH = 25;
 		static int MAX_NUMBER_OF_RECORDS = 30;
-		
+
 		string currentTable;
+		string sql;
+
+		public void UpdateRecordsView ()
+		{
+
+			/* In C#, IIUC, it is better to create a new List object and
+			 * let the GC clear the old list object, is faster than
+			 * emptying the list manually and adding items again.
+			 */
+			records = new RecordsList ();
+			sql = "SELECT * FROM " + currentTable;
+			command.CommandText = sql;
+			reader = command.ExecuteReader ();
+			int n = 0, col_count;
+			while (reader.Read () && n++ < MAX_NUMBER_OF_RECORDS) {
+				List <string> record;
+				record = new List<string> ();
+
+				for (col_count = 0; col_count < reader.FieldCount; ++col_count) {
+					try {
+						//Console.WriteLine (col_count + "Adding column " + reader.GetString (col_count));
+						record.Add (reader.GetString (col_count));
+					} catch (System.NullReferenceException ex){
+						record.Add ("???");
+					}
+				}
+				records.Add (record);
+			}
+
+			if (records_view != null)
+				recordsFrame.Remove (records_view);
+
+			records_view = new ListView (1, 1, 1, records.Items, records);
+			recordsFrame.Add (records_view);
+			recordsFrame.Redraw ();
+		}
 
 		public Shell (string filename) : base (0, 0, Application.Cols, Application.Lines)
 		{
 			string connectionString;
-			string sql;
-			TablesList tables = new TablesList ();
+
+			tables = new TablesList ();
 
 			connectionString = "URI=file:" + filename;
 			dbConnection = (IDbConnection) new SqliteConnection(connectionString);
@@ -145,27 +192,6 @@ namespace Autobahn
 			}
 			currentTable = tables.items [0];
 
-			RecordsList records = new RecordsList ();
-			sql = "SELECT * FROM " + currentTable;
-			command.CommandText = sql;
-			reader = command.ExecuteReader ();
-			int n = 0, col_count;
-			while (reader.Read () && n++ < MAX_NUMBER_OF_RECORDS) {
-				List <string> record;
-				record = new List<string> ();
-
-				for (col_count = 0; col_count < reader.FieldCount; ++col_count) {
-					try {
-						Console.WriteLine (col_count + "Adding column " + reader.GetString (col_count));
-						record.Add (reader.GetString (col_count));
-					} catch (System.NullReferenceException ex){
-						record.Add ("???");
-					}
-				}
-				records.Add (record);
-			}
-
-			/* =========================================== */
 			Frame tablesFrame = new Frame ("Tables");
 			Add (tablesFrame);
 
@@ -175,19 +201,25 @@ namespace Autobahn
 			tablesFrame.w = TABLES_WIDTH;
 			tablesFrame.h = Application.Lines;
 
-			ListView tables_view = new ListView (1, 1, 1, tables.Items, tables);
+			tables_view = new ListView (1, 1, 1, tables.Items, tables);
 			tablesFrame.Add (tables_view);
 
-			Frame recordsFrame = new Frame ("Records");
+			recordsFrame = new Frame ("Records");
 			recordsFrame.x = TABLES_WIDTH;
 			recordsFrame.y = 0;
 			recordsFrame.w = Application.Cols - TABLES_WIDTH - 1;
 			recordsFrame.h = Application.Lines;
-
 			Add (recordsFrame);
 
-			ListView records_view = new ListView (1, 1, 1, records.Items, records);
-			recordsFrame.Add (records_view);
+			UpdateRecordsView ();
+
+			tables.newSel += new TablesList.TableSelectionChanged (UpdateRecordsForNewSelectedTable);
+		}
+
+		private void UpdateRecordsForNewSelectedTable (TablesList t, EventArgs e)
+		{
+			currentTable = t.items[tables_view.Selected];
+			UpdateRecordsView ();
 		}
 
 		~Shell ()
