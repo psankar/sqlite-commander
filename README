@@ -3,7 +3,7 @@ Sqlite-Commander
 
 Sqlite-Commander is a project that is aimed to display sqlite databases in Terminal using ncurses. Mono.NCurses is used as the CUI framework. The name is inspired from Midnight-Commander written by Miguel De Icaza.
 
-All the source code is available to you in LGPL v2 only.
+All the source code is available to you in LGPL v2.1 only.
 
 Drop me a mail if you like the software.
 
