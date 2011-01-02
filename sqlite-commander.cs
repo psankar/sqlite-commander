@@ -5,7 +5,7 @@ using System.Data;
 using Mono.Terminal;
 using Mono.Data.SqliteClient;
 
-namespace Autobahn 
+namespace SqliteCommander 
 {
 	public class TablesList : IListProvider 
 	{
